@@ -1,43 +1,43 @@
-#include <iostream>
+﻿#include <iostream>
 #include <thread>
 #include <mutex>
 #include <chrono>
 #include <atomic>
+#include <vector>
+#include <string>
 
 using namespace std;
 
-const int NUM_THREADS[] = { 4, 8, 16, 32 };
 const int NUM_TASKS = 1048576;
+mutex mtx;
 
-int* arr, index;
 bool sleep = false;
 
-mutex mtx;
-atomic<int> atomicIndex;
+int index = 0;
+
+vector<int> arr;
+
+atomic<int> atomicIndex{ 0 };
+atomic<int> arr2[NUM_TASKS]{ 0 };
 
 //------------------------------------------------------------
 void initArr()
 {
-	arr = new int[NUM_TASKS];
+	arr.clear();
 
 	for (int i = 0; i < NUM_TASKS; i++)
-		arr[i] = 0;
-}
-
-//------------------------------------------------------------
-int nextIndex()
-{
-	unique_lock<std::mutex> lock(mtx);
-
-	return index++;
+		arr.push_back(0);
 }
 
 //------------------------------------------------------------
 void mutexThreads()
 {
+	lock_guard<mutex> guard(mtx);
+
 	while (index < NUM_TASKS)
 	{
-		arr[nextIndex()] += 1;
+		arr[index] += 1;
+		index++;
 
 		if (sleep)
 			this_thread::sleep_for(chrono::nanoseconds(10));
@@ -49,7 +49,9 @@ void atomicThreads()
 {
 	while (atomicIndex < NUM_TASKS)
 	{
-		arr[atomicIndex++] += 1;
+		int temp = atomicIndex.fetch_add(1);
+
+		arr2[temp] ++;
 
 		if (sleep)
 			this_thread::sleep_for(chrono::nanoseconds(10));
@@ -57,85 +59,28 @@ void atomicThreads()
 }
 
 //------------------------------------------------------------
-int main()
+void mutexCheck(int numOfThreads, bool sleep)
 {
+	index = 0;
+
 	initArr();
 
-	char ch;
-	void (*funcPtr)();
-	int threadindex;
-	bool crrctArrFllng = true;
+	vector<thread> threads;
 
-	cout << "-+=+=+=+=+=+=+=+-+=+=+=+=+=+-+-+-+-+" << endl;
-	cout << "func:                               " << endl;
-	cout << "1. std::mutex 2. std::atomic        " << endl;
-
-	ch = getchar();
-
-	if (ch == '1')
+	for (size_t i = 0; i < numOfThreads; i++)
 	{
-		funcPtr = mutexThreads;
-		index = 0;
+		threads.push_back(thread(mutexThreads));
 	}
-	else if (ch == '2')
-	{
-		funcPtr = atomicThreads;
-		atomicIndex = 0;
-	}
-	else
-	{
-		cout << "wrong symbol" << endl;
-		return 1;
-	}
-
-	cout << "num of threads:                     " << endl;
-	cout << "1. 4, 2. 8, 3. 16, 4. 32            " << endl;
-
-	cin >> ch;
-
-	if (ch == '1')
-		threadindex = 0;
-	else if (ch == '2')
-		threadindex = 1;
-	else if (ch == '3')
-		threadindex = 2;
-	else if (ch == '4')
-		threadindex = 3;
-	else
-	{
-		cout << "wrong symbol" << endl;
-		return 1;
-	}
-
-	cout << "sleep for 10ns after increment? y/n " << endl;
-	cin >> ch;
-
-	if (ch == 'y')
-		sleep = true;
-	else if (ch == 'n')
-		sleep = false;
-	else
-	{
-		cout << "wrong symbol" << endl;
-		return 1;
-	}
-
-	thread* threads = new thread[NUM_THREADS[threadindex]];
 
 	auto start = std::chrono::steady_clock::now();
 
-	for (int i = 0; i < NUM_THREADS[threadindex]; i++)
-	{
-		threads[i] = thread(funcPtr);
-	}
-
-	for (int i = 0; i < NUM_THREADS[threadindex]; i++)
-	{
+	for (int i = 0; i < numOfThreads; i++)
 		threads[i].join();
-	}
 
 	auto end = std::chrono::steady_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+	bool crrctArrFllng = true;
 
 	for (int i = 0; i < NUM_TASKS; i++)
 	{
@@ -148,9 +93,81 @@ int main()
 	}
 
 	if (crrctArrFllng)
-		cout << "The array is filled correctly." << endl;
+		cout << "Mutex, " << numOfThreads << " threads, sleep = " << sleep << ", the array is filled correctly, ";
 
-	cout << "Elapsed time: " << duration.count() << " ms" << endl;
+	cout << "elapsed time: " << duration.count() << " ms" << endl;
+}
+
+//------------------------------------------------------------
+void atomicCheck(int numOfThreads, bool sleep)
+{
+	vector<thread> threads;
+
+	for (size_t i = 0; i < numOfThreads; i++)
+		threads.push_back(thread(atomicThreads));
+
+	auto start = std::chrono::steady_clock::now();
+
+	for (int i = 0; i < numOfThreads; i++)
+		threads[i].join();
+
+	auto end = std::chrono::steady_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+	bool crrctArrFllng = true;
+
+	for (int i = 0; i < NUM_TASKS; i++)
+	{
+		if (arr2[i] != 1)
+		{
+			cout << "Error filling array." << endl;
+			crrctArrFllng = false;
+			break;
+		}
+	}
+
+	if (crrctArrFllng)
+		cout << "Atomic, " << numOfThreads << " threads, sleep = " << sleep << ", the array is filled correctly, ";
+
+	cout << "elapsed time: " << duration.count() << " ms" << endl;
+
+	for (size_t i = 0; i < NUM_TASKS; i++)
+		arr2[i] = 0;
+
+	atomicIndex = 0;
+}
+
+//------------------------------------------------------------
+int main()
+{
+	mutexCheck(4, sleep);
+	mutexCheck(8, sleep);
+	mutexCheck(16, sleep);
+	mutexCheck(32, sleep);
+	
+	sleep = true;
+	cout << "---------------------------------------------------------------------------------" << endl;
+	
+	mutexCheck(4, sleep);
+	mutexCheck(8, sleep);
+	mutexCheck(16, sleep);
+	mutexCheck(32, sleep);
+
+	sleep = false;
+	cout << "---------------------------------------------------------------------------------" << endl;
+
+	atomicCheck(4, sleep);
+	atomicCheck(8, sleep);
+	atomicCheck(16, sleep);
+	atomicCheck(32, sleep);
+
+	sleep = true;
+	cout << "---------------------------------------------------------------------------------" << endl;
+
+	atomicCheck(4, sleep);
+	atomicCheck(8, sleep);
+	atomicCheck(16, sleep);
+	atomicCheck(32, sleep);
 
 	return 0;
 }
