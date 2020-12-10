@@ -9,16 +9,16 @@
 using namespace std;
 
 const int NUM_TASKS = 1048576;
-mutex mtx;
 
 bool sleep = false;
 
 int index = 0;
+atomic<int> atomicIndex{ 0 };
 
 vector<int> arr;
+vector<int> arr2;
 
-atomic<int> atomicIndex{ 0 };
-atomic<int> arr2[NUM_TASKS]{ 0 };
+mutex mtx;
 
 //------------------------------------------------------------
 void initArr()
@@ -26,7 +26,7 @@ void initArr()
 	arr.clear();
 
 	for (int i = 0; i < NUM_TASKS; i++)
-		arr.push_back(0);
+		arr.push_back(0);		
 }
 
 //------------------------------------------------------------
@@ -36,7 +36,7 @@ void mutexThreads()
 
 	while (index < NUM_TASKS)
 	{
-		arr[index] += 1;
+		arr.at(index) += 1;
 		index++;
 
 		if (sleep)
@@ -47,15 +47,17 @@ void mutexThreads()
 //------------------------------------------------------------
 void atomicThreads()
 {
-	while (atomicIndex < NUM_TASKS)
+	while (atomicIndex.load() < NUM_TASKS)
 	{
 		int temp = atomicIndex.fetch_add(1);
 
-		arr2[temp] ++;
+		if(temp < NUM_TASKS)
+			arr2.at(temp)++;
 
 		if (sleep)
 			this_thread::sleep_for(chrono::nanoseconds(10));
 	}
+	
 }
 
 //------------------------------------------------------------
@@ -84,7 +86,7 @@ void mutexCheck(int numOfThreads, bool sleep)
 
 	for (int i = 0; i < NUM_TASKS; i++)
 	{
-		if (arr[i] != 1)
+		if (arr.at(i) != 1)
 		{
 			cout << "Error filling array." << endl;
 			crrctArrFllng = false;
@@ -102,6 +104,13 @@ void mutexCheck(int numOfThreads, bool sleep)
 void atomicCheck(int numOfThreads, bool sleep)
 {
 	vector<thread> threads;
+	atomicIndex = 0;
+	arr2.clear();
+
+	for (size_t i = 0; i < NUM_TASKS; i++)
+	{
+		arr2.push_back(0);
+	}
 
 	for (size_t i = 0; i < numOfThreads; i++)
 		threads.push_back(thread(atomicThreads));
@@ -118,7 +127,7 @@ void atomicCheck(int numOfThreads, bool sleep)
 
 	for (int i = 0; i < NUM_TASKS; i++)
 	{
-		if (arr2[i] != 1)
+		if (arr2.at(i) != 1)
 		{
 			cout << "Error filling array." << endl;
 			crrctArrFllng = false;
@@ -130,11 +139,6 @@ void atomicCheck(int numOfThreads, bool sleep)
 		cout << "Atomic, " << numOfThreads << " threads, sleep = " << sleep << ", the array is filled correctly, ";
 
 	cout << "elapsed time: " << duration.count() << " ms" << endl;
-
-	for (size_t i = 0; i < NUM_TASKS; i++)
-		arr2[i] = 0;
-
-	atomicIndex = 0;
 }
 
 //------------------------------------------------------------
@@ -160,10 +164,10 @@ int main()
 	atomicCheck(8, sleep);
 	atomicCheck(16, sleep);
 	atomicCheck(32, sleep);
-
+	
 	sleep = true;
 	cout << "---------------------------------------------------------------------------------" << endl;
-
+	
 	atomicCheck(4, sleep);
 	atomicCheck(8, sleep);
 	atomicCheck(16, sleep);
