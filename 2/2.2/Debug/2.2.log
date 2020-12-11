@@ -1,0 +1,5 @@
+﻿  Source1.cpp
+C:\Users\ya\Desktop\Source1.cpp(32,43): warning C4018: '<': signed/unsigned mismatch
+C:\Users\ya\Desktop\Source1.cpp(111,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\ya\Desktop\Source1.cpp(116,23): warning C4018: '<': signed/unsigned mismatch
+  2.2.vcxproj -> C:\University\fifth-semester\ABC-2020\2\2.2\Debug\2.2.exe

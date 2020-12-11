@@ -1,0 +1,4 @@
+﻿  Source.cpp
+C:\University\fifth-semester\ABC-2020\2\2.1\Source.cpp(96,23): warning C4018: '<': signed/unsigned mismatch
+C:\University\fifth-semester\ABC-2020\2\2.1\Source.cpp(101,23): warning C4018: '<': signed/unsigned mismatch
+  2.1.vcxproj -> C:\University\fifth-semester\ABC-2020\2\2.1\Debug\2.1.exe
