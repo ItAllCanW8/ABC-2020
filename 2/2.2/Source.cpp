@@ -71,7 +71,7 @@ void consumerFunc()
 	{
 		if (!q.pop(val))
 		{
-			//cout << "//Partial sum = " << sum << endl;
+			cout << "//Partial sum = " << sum << endl;
 			totalSum += sum;
 			break;
 		}
@@ -86,11 +86,11 @@ void producerFunc()
 	for (int i = 0; i < NUM_TASKS; i++)
 	{ 
 		q.push(1);
-
-		mtx.lock();
-		counter++;
-		mtx.unlock();
 	}
+
+	mtx.lock();
+	counter += NUM_TASKS;
+	mtx.unlock();
 
 	if (counter == NUM_TASKS * prodNum)
 	{
@@ -146,28 +146,31 @@ void output(int consNum, int prodNum)
 //------------------------------------------------------------
 int main()
 {
-	maxFqSize = 1;
-	output(1, 1);
-	prodNum = 2;
-	output(2, 2);
-	prodNum = 4;
-	output(4, 4);
-
-	maxFqSize = 4;
 	prodNum = 1;
-	output(1, 1);
-	prodNum = 2;
-	output(2, 2);
-	prodNum = 4;
-	output(4, 4);
+	output(4, 1);
 
-	maxFqSize = 16;
-	prodNum = 1;
-	output(1, 1);
-	prodNum = 2;
-	output(2, 2);
-	prodNum = 4;
-	output(4, 4);
+	//maxFqSize = 1;
+	//output(1, 1);
+	//prodNum = 2;
+	//output(2, 2);
+	//prodNum = 4;
+	//output(4, 4);
+	//
+	//maxFqSize = 4;
+	//prodNum = 1;
+	//output(1, 1);
+	//prodNum = 2;
+	//output(2, 2);
+	//prodNum = 4;
+	//output(4, 4);
+	//
+	//maxFqSize = 16;
+	//prodNum = 1;
+	//output(1, 1);
+	//prodNum = 2;
+	//output(2, 2);
+	//prodNum = 4;
+	//output(4, 4);
 
 	system("pause");
 	return 0;
